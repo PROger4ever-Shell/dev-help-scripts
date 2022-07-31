@@ -1,17 +1,9 @@
 #!/bin/bash
 
 # region Parameters
-CONNECTION_SRC_HOST="$1"
-CONNECTION_SRC_USER="$2"
-CONNECTION_SRC_PASSWORD="$3"
-CONNECTION_SRC_DB_NAME="$4"
-
-BACKUP_FILE_PREFIX_FULL="$5"
-
-CONNECTION_DST_HOST="$6"
-CONNECTION_DST_USER="$7"
-CONNECTION_DST_PASSWORD="$8"
-CONNECTION_DST_DB_NAME="$9"
+CONNECTION_SRC_CREDENTIALS="$1"
+BACKUP_FILE_PREFIX_FULL="$2"
+CONNECTION_DST_CREDENTIALS="$3"
 # endregion Parameters
 
 # region Var defaults
@@ -21,6 +13,9 @@ COMPRESSION_LEVEL=6
 BACKUP_FILES_MAX_COUNT=3
 CLONE_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
 CLONE_DATE_PATTERN='????-??-??_??-??-??'
+
+MYSQLDUMP_PARAMETERS='--extended-insert --quick --add-locks --lock-tables=false --single-transaction --create-options --no-tablespaces'
+MYSQL_PARAMETERS=''
 # endregion Var defaults
 
 # region Env
@@ -53,6 +48,9 @@ COMPRESSION_LEVEL="${CLONE_MYSQL_DB_COMPRESSION_LEVEL:-$COMPRESSION_LEVEL}"
 BACKUP_FILES_MAX_COUNT="${CLONE_MYSQL_DB_BACKUP_FILES_MAX_COUNT:-$BACKUP_FILES_MAX_COUNT}"
 CLONE_DATE="${CLONE_MYSQL_DB_CLONE_DATE:-$CLONE_DATE}"
 CLONE_DATE_PATTERN="${CLONE_MYSQL_DB_CLONE_DATE_PATTERN:-$CLONE_DATE_PATTERN}"
+
+MYSQLDUMP_PARAMETERS="${CLONE_MYSQL_DB_MYSQLDUMP_PARAMETERS:-$MYSQLDUMP_PARAMETERS}"
+MYSQL_PARAMETERS="${CLONE_MYSQL_DB_MYSQL_PARAMETERS:-$MYSQL_PARAMETERS}"
 # endregion Vars
 
 # region Paths
@@ -96,17 +94,8 @@ function remove_extra_backups() {
 
 function dump_db() {
   echo -e "\n- mysqldump to file" >&2
-  mysqldump \
-    --add-locks \
-    --lock-tables=false \
-    --single-transaction \
-    --create-options \
-    --no-tablespaces \
-    --host \
-    "$CONNECTION_SRC_HOST" \
-    --user "$CONNECTION_SRC_USER" \
-    "--password=$CONNECTION_SRC_PASSWORD" \
-    "$CONNECTION_SRC_DB_NAME" |
+  # shellcheck disable=SC2086
+  mysqldump $MYSQLDUMP_PARAMETERS $CONNECTION_SRC_CREDENTIALS |
     dd status=progress bs=8M |
     pigz -c "-$COMPRESSION_LEVEL" \
       >"$BACKUP_PARTIAL_FILE_FULL_PATH" &&
@@ -114,19 +103,15 @@ function dump_db() {
 }
 
 function restore_db() {
-  if [[ -z "$CONNECTION_DST_HOST" ]]; then
+  if [[ -z "$CONNECTION_DST_CREDENTIALS" ]]; then
     return 0
   fi
 
   echo -e "\n- Restore db from file"
+  # shellcheck disable=SC2086
   pigz -cd "$BACKUP_COMPLETED_FILE_FULL_PATH" |
     dd status=progress bs=8M |
-    mysql \
-      --protocol tcp \
-      --host "$CONNECTION_DST_HOST" \
-      --user "$CONNECTION_DST_USER" \
-      "--password=$CONNECTION_DST_PASSWORD" \
-      "$CONNECTION_DST_DB_NAME"
+    mysql $MYSQL_PARAMETERS $CONNECTION_DST_CREDENTIALS
 }
 
 function check_return_code() {
