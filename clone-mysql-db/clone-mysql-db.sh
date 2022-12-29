@@ -16,6 +16,8 @@ CLONE_DATE_PATTERN='????-??-??_??-??-??'
 
 MYSQLDUMP_PARAMETERS='--add-drop-table --add-locks --create-options --disable-keys --extended-insert --lock-tables=false --quick --set-charset --single-transaction --compress --dump-date'
 MYSQL_PARAMETERS=''
+MYSQLDUMP_FILE_BEGIN=''
+MYSQLDUMP_FILE_END=''
 # endregion Var defaults
 
 # region Env
@@ -51,6 +53,8 @@ CLONE_DATE_PATTERN="${CLONE_MYSQL_DB_CLONE_DATE_PATTERN:-$CLONE_DATE_PATTERN}"
 
 MYSQLDUMP_PARAMETERS="${CLONE_MYSQL_DB_MYSQLDUMP_PARAMETERS:-$MYSQLDUMP_PARAMETERS}"
 MYSQL_PARAMETERS="${CLONE_MYSQL_DB_MYSQL_PARAMETERS:-$MYSQL_PARAMETERS}"
+MYSQLDUMP_FILE_BEGIN="${CLONE_MYSQL_DB_MYSQLDUMP_FILE_BEGIN:-$MYSQLDUMP_FILE_BEGIN}"
+MYSQLDUMP_FILE_END="${CLONE_MYSQL_DB_MYSQLDUMP_FILE_END:-$MYSQLDUMP_FILE_END}"
 # endregion Vars
 
 # region Paths
@@ -94,9 +98,11 @@ function remove_extra_backups() {
 
 function dump_db() {
   echo -e "\n- mysqldump to file" >&2
+
   # shellcheck disable=SC2086
   mysqldump $MYSQLDUMP_PARAMETERS $SRC_CONNECTION_CREDENTIALS |
     dd status=progress bs=8M |
+    cat $MYSQLDUMP_FILE_BEGIN - $MYSQLDUMP_FILE_END |
     pigz -c "-$COMPRESSION_LEVEL" \
       >"$BACKUP_PARTIAL_FILE_FULL_PATH" &&
     mv "$BACKUP_PARTIAL_FILE_FULL_PATH" "$BACKUP_COMPLETED_FILE_FULL_PATH"
