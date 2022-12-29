@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # region Parameters
-CONNECTION_SRC_CREDENTIALS="$1"
+SRC_CONNECTION_CREDENTIALS="$1"
 BACKUP_FILE_PREFIX_FULL="$2"
-CONNECTION_DST_CREDENTIALS="$3"
+DST_CONNECTION_CREDENTIALS_LIST=("${@:3}")
 # endregion Parameters
 
 # region Var defaults
@@ -95,7 +95,7 @@ function remove_extra_backups() {
 function dump_db() {
   echo -e "\n- mysqldump to file" >&2
   # shellcheck disable=SC2086
-  mysqldump $MYSQLDUMP_PARAMETERS $CONNECTION_SRC_CREDENTIALS |
+  mysqldump $MYSQLDUMP_PARAMETERS $SRC_CONNECTION_CREDENTIALS |
     dd status=progress bs=8M |
     pigz -c "-$COMPRESSION_LEVEL" \
       >"$BACKUP_PARTIAL_FILE_FULL_PATH" &&
@@ -103,15 +103,18 @@ function dump_db() {
 }
 
 function restore_db() {
-  if [[ -z "$CONNECTION_DST_CREDENTIALS" ]]; then
+  if (( ${#DST_CONNECTION_CREDENTIALS_LIST[@]} == 0 )); then
     return 0
   fi
 
-  echo -e "\n- Restore db from file"
-  # shellcheck disable=SC2086
-  pigz -cd "$BACKUP_COMPLETED_FILE_FULL_PATH" |
-    dd status=progress bs=8M |
-    mysql $MYSQL_PARAMETERS $CONNECTION_DST_CREDENTIALS
+  for DST_CONNECTION_CREDENTIALS in "${DST_CONNECTION_CREDENTIALS_LIST[@]}"
+  do
+  	  echo -e "\n- Restore db from file to '$DST_CONNECTION_CREDENTIALS'"
+      # shellcheck disable=SC2086
+      pigz -cd "$BACKUP_COMPLETED_FILE_FULL_PATH" |
+        dd status=progress bs=8M |
+        mysql $MYSQL_PARAMETERS $DST_CONNECTION_CREDENTIALS
+  done
 }
 
 function check_return_code() {

@@ -7,12 +7,13 @@
   /path/dump_file_prefix
 ```
 
-### Save as sql.gz only and clone
+### Save as sql.gz only and clone to several destination databases
 ```shell
 ./clone-mysql-db.sh \
   "--protocol tcp --host src_host --port 3306 --user src_user --password=src_password src_db_name" \
   /path/dump_file_prefix \
-  "--protocol tcp --host dst_host --port 3306 --user dst_user --password=dst_password dst_db_name"
+  "--protocol tcp --host dst_host1 --port 3306 --user dst_user1 --password=dst_password1 dst_db_name1" \
+  "--protocol tcp --host dst_host2 --port 3306 --user dst_user2 --password=dst_password2 dst_db_name2"
 ```
 
 ### Crontab task example
