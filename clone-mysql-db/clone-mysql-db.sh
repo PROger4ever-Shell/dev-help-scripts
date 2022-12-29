@@ -14,7 +14,7 @@ BACKUP_FILES_MAX_COUNT=3
 CLONE_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
 CLONE_DATE_PATTERN='????-??-??_??-??-??'
 
-MYSQLDUMP_PARAMETERS='--extended-insert --quick --add-locks --lock-tables=false --single-transaction --create-options --no-tablespaces'
+MYSQLDUMP_PARAMETERS='--add-drop-table --add-locks --create-options --disable-keys --extended-insert --lock-tables=false --quick --set-charset --single-transaction --compress --dump-date'
 MYSQL_PARAMETERS=''
 # endregion Var defaults
 
